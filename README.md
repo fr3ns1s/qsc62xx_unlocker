@@ -4,6 +4,10 @@ Tested on
 * ZTE T95 TEL_AU_P622C6V1.0.2B03-S
 Later i will upload some infos for add new phone/version
 
+# How to compile shellcode
+you use a raspberry pi3:
+ >as shellcode.s -mlittle-endian -o zte && objcopy -O binary zte zte_shellcode.bin
+
 ## Requirements
 * PyPI dependencies:
   python3 -m pip install -r requirements.tx

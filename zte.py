@@ -14,8 +14,7 @@ import sys, getopt
 
 DEBUG = False
 DIAG_PORT_NAME = "ZTE Handset Diagnostic Interface"
-SUPPORTED_FW = ["H3G_IT_P640A30V1.0.0B11-S","TEL_AU_P622C6V1.0.2B03-S"]
-PAGES_NUMBER = 0x3F
+PAGES_NUMBER = 0x40
 BASE_ADR = 0x02FF0000
 BUFFER_ADR = 0x2FF0600
 SHA1_GARBAGE_DATA = "1716ceb1ddb775abd1aab979caa75c208d648df0"
@@ -215,7 +214,7 @@ def readInfo():
 #unlocking
 def getOffsets(firmware_version):
 
-    print("Selecting offsets")
+    print("Selecting offsets ...")
 
     #diag_ptr: .word 0x41414141
     #nand_probe_ptr: .word 0x42424242
@@ -238,7 +237,7 @@ def sendShellCode(firmware_version):
 
     offsets = getOffsets(firmware_version)    
     start_adr = BASE_ADR
-    shellcode_file = "zte_shellcode_bin"
+    shellcode_file = "zte_shellcode.bin"
     shellcode_size = os.stat(shellcode_file).st_size
     i = 0
  
@@ -414,6 +413,8 @@ def writeNand(pages,file_name):
                 print("Skipping page 0x{:02X}".format(page))
             chunk = f.read(0x800)
             page +=1
+            if page == pages:
+                chunk = None
            
     f.close()
 
@@ -446,7 +447,7 @@ def unlock():
     file_name = backupFileName()
     if readNand(PAGES_NUMBER,file_name):
         clearNand()
-        writeNand(SIMLOCK_PAGE - 1,file_name)
+        writeNand(SIMLOCK_PAGE,file_name)
         print("All done! Please power off your phone")
         
 
