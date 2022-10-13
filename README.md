@@ -1,4 +1,4 @@
-# qsc6240 unlocker
+# qsc62xx unlocker
 Tested on
 * ZTE F116 H3G_IT_P640A30V1.0.0B11-S
 * ZTE T95 TEL_AU_P622C6V1.0.2B03-S
