@@ -10,7 +10,7 @@ from datetime import datetime
 import progressbar
 import hashlib
 import sys, getopt
-
+import typing
 
 DEBUG = False
 DIAG_PORT_NAME = "ZTE Handset Diagnostic Interface"
@@ -18,7 +18,6 @@ PAGES_NUMBER = 0x40
 BASE_ADR = 0x02FF0000
 BUFFER_ADR = 0x2FF0600
 SHA1_GARBAGE_DATA = "1716ceb1ddb775abd1aab979caa75c208d648df0"
-SIMLOCK_PAGE = 0x3F
 
 #shellcode command
 CMD_EXEC = "40"
@@ -27,6 +26,11 @@ CMD_READ = "42"
 CMD_ERASE = "43"
 CMD_COPY = "44"
 CMD_WRITE = "45"
+
+n = bytearray.fromhex("15F0D805A5579FF27AB9BFE11D54DECEAB56EDAF7697AE372639C84CEB6BE443783D87267FAAD" \
+    "124C6C671080ED7989A57BA468505D7003D2B3DB17CD70645D3DF7C0C1295EC571D3C59C4AC504878CA6EC50DEBAC737" \
+    "295CC619D4A85E0BCD10A104C7A05FF46FDA10D1CC2A364E8C4BC9373EDC875CF4357E32A8A4F04B9B6")
+e = bytearray.fromhex("010001")
 
 crc_qualcom = crcmod.mkCrcFun(0x11021,rev=True,initCrc=0,xorOut=0xffff)
 serial_port = serial.Serial()
@@ -45,6 +49,11 @@ def bytes2Str(bytes):
 def str2Bytes(str):
     return str.encode("utf8")
 
+def int_to_bytes(integer: int, length: typing.Optional[int] = None) -> bytes:
+    return integer.to_bytes(
+        length or (integer.bit_length() + 7) // 8 or 1, "big"
+    )
+    
 def update_bar(bar,value,sleep_time):
     
     value +=1
@@ -250,13 +259,13 @@ def sendShellCode(firmware_version):
                 bytes_hex = bytes2hex(chunk)
                 if bytes_hex == "41414141":
                     for offset in offsets[1:]:
-                     offset = struct.pack("<I",offset) 
-                     serial_port.write(buildFrame("07" + bytes2hex(struct.pack("<I",start_adr)) + "01" + bytes2hex(offset) + "00000000"))
-                     readed = serial_port.read_until(b"\x7E")
-                     log("<- " + bytes2hex(readed))
-                     start_adr +=4
-                     i = update_bar(bar,i,0.05)
-                     chunk = None
+                        offset = struct.pack("<I",offset) 
+                        serial_port.write(buildFrame("07" + bytes2hex(struct.pack("<I",start_adr)) + "01" + bytes2hex(offset) + "00000000"))
+                        readed = serial_port.read_until(b"\x7E")
+                        log("<- " + bytes2hex(readed))
+                        start_adr +=4
+                        i = update_bar(bar,i,0.05)
+                        chunk = None
                 else:
                     serial_port.write(buildFrame("07" + bytes2hex(struct.pack("<I",start_adr)) + "01" + bytes_hex + "00000000"))
                     readed = serial_port.read_until(b"\x7E")
@@ -388,7 +397,24 @@ def clearNand():
     log("<- " + bytes2hex(readed))
 
 
-def writeNand(pages,file_name):
+def decryptSignature(page,chunk):
+ 
+ found = False
+ try:
+     sign_enc = chunk[0x65:0x65+0x80]
+     res_dec = pow(int.from_bytes(sign_enc,"big"), int.from_bytes(e,"little"),int.from_bytes(n,"little"))
+     res_dec = bytes2hex(int_to_bytes(res_dec))
+ except Exception as message:
+    print(message)
+ finally:
+     if "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" \
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" \
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00" in res_dec:
+        print("Simlock Signature at 0x{:04X} {}".format(page,res_dec))
+        found = True
+     return found
+
+def writeNand(pages,file_name,unlock):
     
     print("Writing nand pages 0x{:04X} from {} ...".format(pages,file_name))
     page = 0
@@ -396,6 +422,10 @@ def writeNand(pages,file_name):
         chunk = f.read(0x800)
         while chunk:
             hash = hashlib.sha1(chunk)
+            if unlock and decryptSignature(page,chunk):
+               chunk = f.read(0x800)
+               page +=1
+               continue
             if hash.hexdigest() != SHA1_GARBAGE_DATA:
                 print("Writing page 0x{:02X}".format(page))
                 with progressbar.ProgressBar(max_value=int(0x800/0x200)) as bar:
@@ -414,7 +444,7 @@ def writeNand(pages,file_name):
             chunk = f.read(0x800)
             page +=1
             if page == pages:
-                chunk = None
+               break
            
     f.close()
 
@@ -447,7 +477,8 @@ def unlock():
     file_name = backupFileName()
     if readNand(PAGES_NUMBER,file_name):
         clearNand()
-        writeNand(SIMLOCK_PAGE,file_name)
+        pages = int(os.stat(file_name).st_size / 0x800)
+        writeNand(pages,file_name,True)
         print("All done! Please power off your phone")
         
 
@@ -482,7 +513,7 @@ def restoreNand(file_name):
     execShellCode()
     initNand()
     clearNand()
-    writeNand(pages,file_name)
+    writeNand(pages,file_name,False)
     print("All done! Please power off your phone")
 
 def print_help():

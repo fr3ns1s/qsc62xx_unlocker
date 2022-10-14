@@ -10,7 +10,7 @@ you use a raspberry pi3:
 
 ## Requirements
 * PyPI dependencies:
-  python3 -m pip install -r requirements.tx
+  python3 -m pip install -r requirements.txt
 
 ## Usage
 * ./zte.py -i => read info
