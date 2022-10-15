@@ -1,3 +1,4 @@
+from ast import Not
 from genericpath import isfile
 import os
 import serial
@@ -18,6 +19,7 @@ PAGES_NUMBER = 0x40
 BASE_ADR = 0x02FF0000
 BUFFER_ADR = 0x2FF0600
 SHA1_GARBAGE_DATA = "1716ceb1ddb775abd1aab979caa75c208d648df0"
+SIMLOCK_PAGE = 0x3f
 
 #shellcode command
 CMD_EXEC = "40"
@@ -26,6 +28,9 @@ CMD_READ = "42"
 CMD_ERASE = "43"
 CMD_COPY = "44"
 CMD_WRITE = "45"
+HEADER_CLIENT = "AB"
+HEADER_HOST = "BA"
+FRAME_OK = "BA010001B90A7E"
 
 n = bytearray.fromhex("15F0D805A5579FF27AB9BFE11D54DECEAB56EDAF7697AE372639C84CEB6BE443783D87267FAAD" \
     "124C6C671080ED7989A57BA468505D7003D2B3DB17CD70645D3DF7C0C1295EC571D3C59C4AC504878CA6EC50DEBAC737" \
@@ -91,7 +96,7 @@ def calcCRC (command):
     crc = f"{crc:04X}"
     return crc
 
-def buildFrame(command):
+def buildFrame(command,with_header = True):
   
     if len(command) < 2: 
         command = "0" + command
@@ -99,7 +104,11 @@ def buildFrame(command):
         return None
 
     command += calcCRC(command)
-    finalCommand = [0x7E]
+    if with_header:
+        finalCommand = [0x7E]
+    else:
+        finalCommand = []
+
     bytes = bytearray.fromhex(command)
     
     for byte in bytes:
@@ -113,7 +122,7 @@ def buildFrame(command):
             finalCommand.append(byte)
    
     finalCommand.append(0x7E)
-    log("-> " + "".join("{:02x}".format(x) for x in finalCommand))
+    log("-> " + "".join("{:02X}".format(x) for x in finalCommand))
     return finalCommand
 
 def cleanFrame(frame):
@@ -225,6 +234,7 @@ def getOffsets(firmware_version):
 
     print("Selecting offsets ...")
 
+    #diagpkt_master_table_ptr
     #diag_ptr: .word 0x41414141
     #nand_probe_ptr: .word 0x42424242
     #nand_read_ptr: .word 0x43434343
@@ -233,11 +243,14 @@ def getOffsets(firmware_version):
     #nand_probe_array_ptr: .word 0x46464646
     #buffer_ptr: .word 0x47474747
 
+    #all offsets except the 1st(diagpkt_master_table) are address+1 (thumb mode)
+    
     if "H3G_IT_P640A30V1.0.0B11-S" in firmware_version:
         return [0x015AB4D0,0x11985B3,0xC3E83D,0xC3E973,0xC3E8FF,0xC3E877,0x2ff0f00,BUFFER_ADR]
-        
     elif "TEL_AU_P622C6V1.0.2B03-S" in firmware_version:
         return [0x019D9CA4,0x1264DF7,0x29E0CD,0x29E203,0x29E18F,0x29E107,0x2ff0f00,BUFFER_ADR]
+    elif "ORG_UK_P671A80V1.0.0B23-S" in firmware_version:
+        return [0x23041E4,0x169D3A5,0x408AF9,0x408C2F,0x408BBB,0x408B33,0x2ff0f00,BUFFER_ADR]
     else:
         print("Firmware not supported")
         exit(-1)
@@ -304,7 +317,7 @@ def sendShellCode(firmware_version):
         start_adr +=4
         
         xs.extend(struct.pack("<I",start_adr))
-        xs.extend(bytearray.fromhex("01AB00AB0000000000"))
+        xs.extend(bytearray.fromhex("01" + HEADER_CLIENT + "00" + HEADER_CLIENT + "0000000000"))
         start_adr +=4
 
         xs.extend(struct.pack("<I",start_adr))
@@ -318,7 +331,6 @@ def sendShellCode(firmware_version):
         xs.extend(struct.pack("<I",start_adr-0x18))
         xs.extend(bytearray.fromhex("00000000"))
 
-
         for n in range(0,9):
             bytes_hex = bytes2hex(xs[n*13:(n*13)+13])
             serial_port.write(buildFrame("07" + bytes_hex ))
@@ -331,17 +343,24 @@ def sendShellCode(firmware_version):
 def execShellCode():
     
     print("Executing shellcode ...")
-    serial_port.write(buildFrame("AB" + CMD_EXEC)) 
+    serial_port.write(buildFrame(HEADER_CLIENT + CMD_EXEC)) 
     readed = serial_port.read_until(b"\x7E")
     log("<- " + bytes2hex(readed))
+    if readed[0:1] != bytes.fromhex(HEADER_HOST):
+        print("Shellcode not ready ... exiting")
+        exit(1)
     len = struct.unpack("<h",readed[1:3])[0]
     print("Shellcode version: {}".format(bytes2Str(readed[3:len+3])))
 
 def initNand():
     
     print("Initing nand ...")
-    serial_port.write(buildFrame("AB" + CMD_INIT))
+    serial_port.write(buildFrame(HEADER_CLIENT + CMD_INIT))
     readed = serial_port.read_until(b"\x7E")
+    log("<- " + bytes2hex(readed))
+    if readed != bytes.fromhex(FRAME_OK):
+         print("Init fail ... exiting")
+         exit(1)
     #flash name
     serial_port.write(buildFrame("04900FFF020400"))
     readed = serial_port.read_until(b"\x7E")
@@ -360,12 +379,12 @@ def initNand():
     serial_port.write(buildFrame("049C0FFF020400"))
     readed = serial_port.read_until(b"\x7E")
     log("<- " + bytes2hex(readed))
-    page_size = struct.unpack("<I",readed[7:11])[0]
-    total_page = struct.unpack("<I",readed[7+4:11+4])[0]
+    page_size = struct.unpack("<H",readed[7:9])[0]
+    total_page = struct.unpack("<I",readed[9:13])[0]
     
     print("=========================================")
     print("NAND: {}, {:04X}:{:04X} ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id))
-    print("TOTAL SIZE: {}Mb, PAGE SIZE: {}".format(int(((int(total_page) * 0x10000)/1024)/1024),int(page_size)))
+    print("TOTAL SIZE: {}Mb, PAGE SIZE: {}".format(int((int(total_page)/1024)/1024),int(page_size)))
     print("=========================================")
 
 
@@ -376,7 +395,7 @@ def readNand(pages,file_name):
         with progressbar.ProgressBar(max_value=pages) as bar:
             for i in range(0,pages):
                 adr = struct.pack("<I",i)
-                serial_port.write(buildFrame("AB" + CMD_READ + bytes2hex(adr)))
+                serial_port.write(buildFrame(HEADER_CLIENT + CMD_READ + bytes2hex(adr)))
                 readed = serial_port.read_until(b"\x7E")
                 len = struct.unpack("<h",readed[1:3])[0]
                 if len == 0x800:
@@ -392,9 +411,12 @@ def readNand(pages,file_name):
 def clearNand():
     
     print("Clearing nand ...")
-    serial_port.write(buildFrame("AB" + CMD_ERASE +"00000000"))
+    serial_port.write(buildFrame(HEADER_CLIENT + CMD_ERASE +"00000000"))
     readed = serial_port.read_until(b"\x7E")
     log("<- " + bytes2hex(readed))
+    if readed != bytes.fromhex(FRAME_OK):
+         print("Clear nand fail ... exiting")
+         exit(1)
 
 
 def decryptSignature(page,chunk):
@@ -414,7 +436,7 @@ def decryptSignature(page,chunk):
         found = True
      return found
 
-def writeNand(pages,file_name,unlock):
+def writeNand(pages,file_name):
     
     print("Writing nand pages 0x{:04X} from {} ...".format(pages,file_name))
     page = 0
@@ -422,21 +444,17 @@ def writeNand(pages,file_name,unlock):
         chunk = f.read(0x800)
         while chunk:
             hash = hashlib.sha1(chunk)
-            if unlock and decryptSignature(page,chunk):
-               chunk = f.read(0x800)
-               page +=1
-               continue
             if hash.hexdigest() != SHA1_GARBAGE_DATA:
                 print("Writing page 0x{:02X}".format(page))
                 with progressbar.ProgressBar(max_value=int(0x800/0x200)) as bar:
                     for i in range(0,int(0x800/0x200)):
                         sub_chunk = chunk[i*0x200:(i*0x200)+0x200]
-                        serial_port.write(buildFrame("AB" + CMD_COPY + bytes2hex(struct.pack("<I",BUFFER_ADR + i*0x200)) + "00020000" +  bytes2hex(sub_chunk)))
+                        serial_port.write(buildFrame(HEADER_CLIENT + CMD_COPY + bytes2hex(struct.pack("<I",BUFFER_ADR + i*0x200)) + "00020000" +  bytes2hex(sub_chunk)))
                         readed = serial_port.read_until(b"\x7E")
                         log("<- " + bytes2hex(readed))
                         time.sleep(0.2)
                         bar.update(i) 
-                serial_port.write(buildFrame("AB" + CMD_WRITE + bytes2hex(struct.pack("<I",page))))
+                serial_port.write(buildFrame(HEADER_CLIENT + CMD_WRITE + bytes2hex(struct.pack("<I",page))))
                 readed = serial_port.read_until(b"\x7E")
                 log("<- " + bytes2hex(readed))
             else:
@@ -477,8 +495,8 @@ def unlock():
     file_name = backupFileName()
     if readNand(PAGES_NUMBER,file_name):
         clearNand()
-        pages = int(os.stat(file_name).st_size / 0x800)
-        writeNand(pages,file_name,True)
+        #pages = int(os.stat(file_name).st_size / 0x800)
+        writeNand(SIMLOCK_PAGE,file_name)
         print("All done! Please power off your phone")
         
 
@@ -513,7 +531,7 @@ def restoreNand(file_name):
     execShellCode()
     initNand()
     clearNand()
-    writeNand(pages,file_name,False)
+    writeNand(pages,file_name)
     print("All done! Please power off your phone")
 
 def print_help():

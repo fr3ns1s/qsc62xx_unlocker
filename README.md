@@ -2,7 +2,10 @@
 Tested on
 * ZTE F116 H3G_IT_P640A30V1.0.0B11-S
 * ZTE T95 TEL_AU_P622C6V1.0.2B03-S
+* ZTE RIO II ORG_UK_P671A80V1.0.0B23-S
 Later i will upload some infos for add new phone/version
+
+[link text](https://youtu.be/fIWjqIO-FrA " UNLOCK ZTE RIO II aka JACK 3G")
 
 # How to compile shellcode
 you use a raspberry pi3:
@@ -13,10 +16,10 @@ you use a raspberry pi3:
   python3 -m pip install -r requirements.txt
 
 ## Usage
-* ./zte.py -i => read info
-* ./zte.py -u => unlock
-* ./zte.py -d 20 => dump 20 nand pages
-* ./zte.py -w file.bin  => write file to nand
+* python3 zte.py -i => read info
+* python3 zte.py -u => unlock
+* python3 zte.py -d 20 => dump 20 nand pages
+* python3 zte.py -w file.bin  => write file to nand
 
 ## WARNING
 No warranty!

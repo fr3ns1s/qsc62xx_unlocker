@@ -2,20 +2,6 @@
 .global _main
 .syntax unified
 
-@ZTE F116 H3G_IT_P640A30V1.0.0B11-S
-@diag   0x11985b3
-@probe  0xc3e83d
-@read   0xc3e973
-@erase  0xc3e8ff
-@write  0xc3e877
-
-@ZTE T95 TEL_AU_P622C6V1.0.2B03-S
-@diag   0x1264df7
-@probe  0x29e0cd
-@read   0x29e203
-@erase  0x29e18f
-@write  0x29e107
-
 @commands
 @0x40 exec loader
 @0x41 nand init
@@ -67,17 +53,7 @@ lbl_erase_nand:
     blx func_nand_erase_block
     cmp r0, #0
     bne lbl_error
-    movs r0, #0xba
-    movs r1, #4
-    blx func_diagpkt_alloc
-    adds r4, r0, #0
-    movs r0, #0x1
-    strb r0, [r4,#1]
-    movs r0, #0x00
-    strb r0, [r4,#2]
-    movs r0, #0x1
-    strb r0, [r4,#3]
-    b lbl_epilogue
+    b lbl_ok
 lbl_copy_data_to_write:
     cmp r0, #0x44 
     bne lbl_write_nand
@@ -98,17 +74,7 @@ lbl_copy_data_to_write:
     blx func_copy_data_at
     cmp r0, #0
     bne lbl_error
-    movs r0, #0xba
-    movs r1, #4
-    blx func_diagpkt_alloc
-    adds r4, r0, #0
-    movs r0, #0x1
-    strb r0, [r4,#1]
-    movs r0, #0x00
-    strb r0, [r4,#2]
-    movs r0, #0x1
-    strb r0, [r4,#3]
-    b lbl_epilogue
+    b lbl_ok
 lbl_write_nand:
     cmp r0, #0x45
     bne lbl_nand_init
@@ -121,32 +87,12 @@ lbl_write_nand:
     blx func_write_nand_page
     cmp r0, #0
     bne lbl_error
-    movs r0, #0xba
-    movs r1, #4
-    blx func_diagpkt_alloc
-    adds r4, r0, #0
-    movs r0, #0x1
-    strb r0, [r4,#1]
-    movs r0, #0x00
-    strb r0, [r4,#2]
-    movs r0, #0x1
-    strb r0, [r4,#3]
-    b lbl_epilogue
+    b lbl_ok
 lbl_nand_init:
     cmp r0, #0x41
     bne lbl_error
     blx func_nand_probe
-    movs r0, #0xba
-    movs r1, #4
-    blx func_diagpkt_alloc
-    adds r4, r0, #0
-    movs r0, #0x1
-    strb r0, [r4,#1]
-    movs r0, #0x00
-    strb r0, [r4,#2]
-    movs r0, #0x1
-    strb r0, [r4,#3]
-    b lbl_epilogue
+    b lbl_ok
 lbl_error:
     movs r0, #0xba
     movs r1, #3
@@ -156,6 +102,19 @@ lbl_error:
     strb r0, [r4,#1]
     movs r0, #0x0
     strb r0, [r4,#2]
+    b lbl_epilogue
+lbl_ok:
+    movs r0, #0xba
+    movs r1, #4
+    blx func_diagpkt_alloc
+    adds r4, r0, #0
+    movs r0, #0x1
+    strb r0, [r4,#1]
+    movs r0, #0x00
+    strb r0, [r4,#2]
+    movs r0, #0x1
+    strb r0, [r4,#3]
+    b lbl_epilogue
 lbl_epilogue:
     mov r0, r4
     pop {r1-r7,pc}
@@ -287,4 +246,3 @@ nand_erase_ptr: .word 0x44444444
 nand_write_ptr: .word 0x45454545
 nand_probe_array_ptr: .word 0x46464646
 buffer_ptr: .word 0x47474747
-
