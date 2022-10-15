@@ -5,7 +5,7 @@ Tested on
 * ZTE RIO II ORG_UK_P671A80V1.0.0B23-S
 Later i will upload some infos for add new phone/version
 
-[link text](https://youtu.be/fIWjqIO-FrA " UNLOCK ZTE RIO II aka JACK 3G")
+[VIDEO UNLOCK ZTE RIO II aka JACK 3G](https://youtu.be/fIWjqIO-FrA "UNLOCK ZTE RIO II aka JACK 3G")
 
 # How to compile shellcode
 you use a raspberry pi3:
