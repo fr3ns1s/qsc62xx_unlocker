@@ -1,4 +1,4 @@
-from ast import Not
+
 from genericpath import isfile
 import os
 import serial
@@ -12,6 +12,7 @@ import progressbar
 import hashlib
 import sys, getopt
 import typing
+
 
 DEBUG = False
 DIAG_PORT_NAME = "ZTE Handset Diagnostic Interface"
@@ -386,12 +387,13 @@ def initNand():
     print("NAND: {}, {:04X}:{:04X} ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id))
     print("TOTAL SIZE: {}Mb, PAGE SIZE: {}".format(int((int(total_page)/1024)/1024),int(page_size)))
     print("=========================================")
-
+   
 
 def readNand(pages,file_name):
    
     print("Saving nand pages 0x{:04X} on file: {} ...".format(pages,file_name))
     with open(file_name,"wb") as f:
+        i = 0
         with progressbar.ProgressBar(max_value=pages) as bar:
             for i in range(0,pages):
                 adr = struct.pack("<I",i)
@@ -403,8 +405,7 @@ def readNand(pages,file_name):
                     f.write(chunk)
                 else:
                     f.write(b'\x2D' * 0x800)
-                time.sleep(0.2)
-                bar.update(i)
+                i = update_bar(bar,i,0.02)
     f.close()
     return True
 
@@ -440,6 +441,7 @@ def writeNand(pages,file_name):
     
     print("Writing nand pages 0x{:04X} from {} ...".format(pages,file_name))
     page = 0
+    i = 0
     with open(file_name,"rb") as f:
         chunk = f.read(0x800)
         while chunk:
@@ -452,8 +454,7 @@ def writeNand(pages,file_name):
                         serial_port.write(buildFrame(HEADER_CLIENT + CMD_COPY + bytes2hex(struct.pack("<I",BUFFER_ADR + i*0x200)) + "00020000" +  bytes2hex(sub_chunk)))
                         readed = serial_port.read_until(b"\x7E")
                         log("<- " + bytes2hex(readed))
-                        time.sleep(0.2)
-                        bar.update(i) 
+                        i = update_bar(bar,i,0.2)
                 serial_port.write(buildFrame(HEADER_CLIENT + CMD_WRITE + bytes2hex(struct.pack("<I",page))))
                 readed = serial_port.read_until(b"\x7E")
                 log("<- " + bytes2hex(readed))
@@ -534,16 +535,78 @@ def restoreNand(file_name):
     writeNand(pages,file_name)
     print("All done! Please power off your phone")
 
+
+
+def dumpFullRam():
+   
+    print ("Setting download mode ...")
+    auth_cmd = "4BCB0200321170B2DCEC4257F087EDCACB09C8AFB6F39A70F4E9F49980AA1141ABB872E6CBD263E279502A35624DA"\
+        "19A6EFE5AF90B9DE95C67004B1DCC4628781B8123433D2760A57CD54FF7455B6CB5EBA0612002725050A4BC7D5D841764F4D" \
+            "6C55AE121CB787D5D5BD874B7373102AFD3FD15C5D89C2CC30C46C3C270CDC371DB43E58B77765E7E"
+    log("-> " + auth_cmd)
+    frame_to_write = bytearray.fromhex(auth_cmd)
+    serial_port.write(frame_to_write)
+    readed = serial_port.read_until(b"\x7E")
+    log("<- " + bytes2hex(readed))
+    frame_to_write = buildFrame("3A")
+    serial_port.write(frame_to_write)
+    readed = serial_port.read_until(b"\x7E")
+    serial_port.close()
+    log("<- " + bytes2hex(readed))
+    print("Waiting 10s ...")
+    time.sleep(10)
+    setupSerialPort()
+    frame_to_write = buildFrame("0C")
+    serial_port.write(frame_to_write)
+    readed = serial_port.read_until(b"\x7E")
+    readed_hex = bytes2hex(readed)
+    log("<- " + readed_hex)
+
+    if readed_hex == "130CD27A7E":
+        print("Download mode error ... exiting")
+        serial_port.close()
+        return
+    
+    print("Download mode: {}".format(bytes2Str(readed[2:-3])))
+    
+    frame_to_write = buildFrame("10")
+    serial_port.write(frame_to_write)
+    readed = serial_port.read_until(b"\x7E")
+    log("<- " +  bytes2hex(readed))
+    readed = readed[3:]
+    type = struct.unpack("<B",readed[0:1])[0]
+    base = struct.unpack(">I",readed[1:5])[0]
+    length = struct.unpack(">I",readed[5:9])[0]
+    print("Getting memory info ...")
+    print("Base: 0x{:08X} Length: 0x{:08X} Type: 0x{:02X}".format(base,length,type))
+    
+    file_name = "full_ram_dump.bin"
+    print("Saving nand dump on file: {} ...".format(file_name))
+    with open(file_name,"wb") as f:
+        i= 0
+        for i in range(base,length, 0x7f8):
+            frame_to_write = buildFrame("12" + bytes2hex(struct.pack(">I",base + i)) +  bytes2hex(struct.pack(">H",0x7f8)))
+            serial_port.write(frame_to_write)
+            readed = serial_port.read_until(b"\x7E")
+            if len(readed) >= 0x7f8:
+                chunk = cleanFrame(readed)
+                f.write(chunk[7:])
+            else:
+                break  
+    f.close()
+
+
 def print_help():
     
-    print("read info => zte.py -i")
-    print("unlock => zte.py -u")
-    print("dump nand => zte -d 63")
-    print("restore nand => zte -r file.bin")
+    print("read info => python3 zte.py -i")
+    print("unlock => python3 zte.py -u")
+    print("dump nand => python3 zte -d 63")
+    print("restore nand =>python3  zte -r file.bin")
+    print("dump ram => python3 zte.py -m")
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv,"iud:r:",["pages==","fileName=="])
+        opts, args = getopt.getopt(argv,"iud:r:m",["pages==","fileName=="])
     except getopt.GetoptError:
         print_help()
         exit(-1)
@@ -577,6 +640,9 @@ def main(argv):
             values = arg.split()
             if len(values) == 1:
                 restoreNand((values[0]))
+        elif opt in ("-m","--download_mode"):
+            setupSerialPort()
+            dumpFullRam()
           
     if serial_port.is_open:
         serial_port.close()
