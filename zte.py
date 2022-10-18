@@ -105,38 +105,27 @@ def buildFrame(command,with_header = True):
         return None
 
     command += calcCRC(command)
-    if with_header:
-        finalCommand = [0x7E]
-    else:
-        finalCommand = []
-
-    bytes = bytearray.fromhex(command)
+    frame = bytearray.fromhex(command)
     
-    for byte in bytes:
-        if byte == 0x7D:
-            finalCommand.append(0x7D)
-            finalCommand.append(0x5D)
-        elif byte == 0x7E:
-            finalCommand.append(0x7D)
-            finalCommand.append(0x5E)
-        else:
-            finalCommand.append(byte)
-   
-    finalCommand.append(0x7E)
-    log("-> " + "".join("{:02X}".format(x) for x in finalCommand))
-    return finalCommand
+    frame = frame.replace(bytes.fromhex("7D"),bytes.fromhex("7D5D"))
+    frame = frame.replace(bytes.fromhex("7E"),bytes.fromhex("7D5E"))
+    if with_header:
+       frame.insert(0,bytes.fromhex("7E")[0])
+    frame.append(0x7E)
+
+    log("-> " + "".join("{:02X}".format(x) for x in frame))
+    return frame
 
 def cleanFrame(frame):
      
-     hex_frame = binascii.hexlify(frame).decode("utf8")
-     hex_frame = hex_frame.replace("7d5e","7e")
-     hex_frame = hex_frame.replace("7d5d","7d")
-     if len(hex_frame) < 6:
+     if len(frame) < 3:
         log("<- ")
         return None
-     log("<- " + hex_frame)
-     hex_frame = hex_frame[:-6]
-     return bytearray.fromhex(hex_frame)
+
+     frame = frame.replace(bytes.fromhex("7D5E"),bytes.fromhex("7E"))
+     frame = frame.replace(bytes.fromhex("7D5D"),bytes.fromhex("7D"))
+     log("<- " + bytes2hex(frame))
+     return frame[:-3]
 
 #info commands
 def readSWInfo():
@@ -582,18 +571,21 @@ def dumpFullRam():
     
     file_name = "full_ram_dump.bin"
     print("Saving nand dump on file: {} ...".format(file_name))
+    print("Started at {}".format(datetime.now()))
     with open(file_name,"wb") as f:
-        i= 0
-        for i in range(base,length, 0x7f8):
-            frame_to_write = buildFrame("12" + bytes2hex(struct.pack(">I",base + i)) +  bytes2hex(struct.pack(">H",0x7f8)))
-            serial_port.write(frame_to_write)
-            readed = serial_port.read_until(b"\x7E")
-            if len(readed) >= 0x7f8:
-                chunk = cleanFrame(readed)
-                f.write(chunk[7:])
-            else:
-                break  
+         with progressbar.ProgressBar(max_value=int(length)) as bar:
+            for i in range(base,length, 0x7f8):
+                frame_to_write = buildFrame("12" + bytes2hex(struct.pack(">I",base + i)) + bytes2hex(struct.pack(">H",0x7f8)))
+                serial_port.write(frame_to_write)
+                readed = serial_port.read_until(b"\x7E")
+                if len(readed) >= 0x7f8:
+                    chunk = cleanFrame(readed)
+                    f.write(chunk[7:])
+                else:
+                    break
+                bar.update(base + i)  
     f.close()
+    print("Finished at {}".format(datetime.now()))
 
 
 def print_help():
