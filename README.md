@@ -3,6 +3,8 @@ Tested on
 * ZTE F116 H3G_IT_P640A30V1.0.0B11-S
 * ZTE T95 TEL_AU_P622C6V1.0.2B03-S
 * ZTE RIO II ORG_UK_P671A80V1.0.0B23-S
+* ZTE F116 MTC_MD_P640A30V1.0.0B05-S 
+* ZTE T95 TEL_AU_P622C6V1.0.2B04-S
 
 [VIDEO UNLOCK ZTE RIO II aka JACK 3G](https://youtu.be/fIWjqIO-FrA "UNLOCK ZTE RIO II aka JACK 3G")
 
@@ -26,6 +28,7 @@ you can use a raspberry pi3:
 2. python3 offsets_finder.py full_ram_dump.bin
 3. add firmware version and result array string from 2 in 
 > getOffsets(firmware_version)
+
 
 ## WARNING
 No warranty!
