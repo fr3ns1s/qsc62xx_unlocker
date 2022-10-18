@@ -241,6 +241,10 @@ def getOffsets(firmware_version):
         return [0x019D9CA4,0x1264DF7,0x29E0CD,0x29E203,0x29E18F,0x29E107,0x2ff0f00,BUFFER_ADR]
     elif "ORG_UK_P671A80V1.0.0B23-S" in firmware_version:
         return [0x23041E4,0x169D3A5,0x408AF9,0x408C2F,0x408BBB,0x408B33,0x2ff0f00,BUFFER_ADR]
+    if "MTC_MD_P640A30V1.0.0B05-S" in firmware_version:
+        return [0x2C96620,0x2C964B3,0x30C9A49,0x30C9B7F,0x30C9B0B,0x30C9A83,0x2FF0F00,BUFFER_ADR]
+    elif "TEL_AU_P622C6V1.0.2B04-S" in firmware_version:
+        return [0x2B425D0,0x2B4245F,0x2C1D375,0x2C1D4AB,0x2C1D437,0x2C1D3AF,0x2FF0F00,BUFFER_ADR]
     else:
         print("Firmware not supported")
         exit(-1)
