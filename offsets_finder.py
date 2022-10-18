@@ -2,8 +2,6 @@ from ast import Break
 import binascii
 import struct
 import sys,os
-from capstone import *
-from capstone.arm import *
 
 def bytes2hex(bytes):
     return binascii.hexlify(bytes).decode("utf8").upper()
