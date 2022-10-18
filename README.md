@@ -4,8 +4,6 @@ Tested on
 * ZTE T95 TEL_AU_P622C6V1.0.2B03-S
 * ZTE RIO II ORG_UK_P671A80V1.0.0B23-S
 
-Later i will upload some infos for add new phone/version
-
 [VIDEO UNLOCK ZTE RIO II aka JACK 3G](https://youtu.be/fIWjqIO-FrA "UNLOCK ZTE RIO II aka JACK 3G")
 
 # How to compile shellcode
@@ -21,13 +19,16 @@ you can use a raspberry pi3:
 * python3 zte.py -u => unlock
 * python3 zte.py -d 20 => dump 20 nand pages
 * python3 zte.py -w file.bin  => write file to nand
+* python3 zte.py -m  => dump full ram in download mode
+
+## How add new firmwares/phone
+1. save full ram: python3 zte.py -m
+2. python3 offsets_finder.py full_ram_dump.bin
+3. add firmware version and result array string from 2 in 
+> getOffsets(firmware_version)
 
 ## WARNING
 No warranty!
 Keep in mind that if something goes wrong and you poweroff the phone than only jtag can it save from trash bin 
 
 Someone will not be happy :)
-
-
-
-
