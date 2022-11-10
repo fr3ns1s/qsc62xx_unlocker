@@ -1,0 +1,103 @@
+Finding Diagnostic Port...
+Port selected: COM34
+Reading info...
+=========================================
+FW INFO: H3G_GB_P607C5V1.0.0B11-S
+COMPILED AT: Jun 17 201015:58:03
+RELEASED AT: Dec 08 200923:00:00
+IMEI: 358048032164995
+BLUETOOTH: 09366C37F598
+USER CODE: 0000
+=========================================
+Selecting offsets ...
+Sending shellcode ...
+100% (168 of 168) |###############################################################################################################################| Elapsed Time: 0:00:10 Time:  0:00:10 
+Executing shellcode ...
+Shellcode version: (c)fr3nsis loader v1.0
+Initing nand ...
+=========================================
+NAND: MICRON_MT29F2G16, 002C:00BA 
+TOTAL SIZE: 132Mb, PAGE SIZE: 2048
+=========================================
+Saving nand pages 0x0040 on file: backup_20221110_134909.bin ...
+100% (64 of 64) |#################################################################################################################################| Elapsed Time: 0:00:04 Time:  0:00:04
+Clearing nand ...
+Writing nand pages 0x003F from backup_20221110_134909.bin ...
+Writing page 0x00
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00 
+Writing page 0x01
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00 
+Skipping page 0x02
+Skipping page 0x03
+Writing page 0x04
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x05
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00 
+Writing page 0x06
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x07
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x08
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x09
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0A
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0B
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0C
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0D
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0E
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Writing page 0x0F
+100% (4 of 4) |###################################################################################################################################| Elapsed Time: 0:00:00 Time:  0:00:00
+Skipping page 0x10
+Skipping page 0x11
+Skipping page 0x12
+Skipping page 0x13
+Skipping page 0x14
+Skipping page 0x15
+Skipping page 0x16
+Skipping page 0x17
+Skipping page 0x18
+Skipping page 0x19
+Skipping page 0x1A
+Skipping page 0x1B
+Skipping page 0x1C
+Skipping page 0x1D
+Skipping page 0x1E
+Skipping page 0x1F
+Skipping page 0x20
+Skipping page 0x21
+Skipping page 0x22
+Skipping page 0x23
+Skipping page 0x24
+Skipping page 0x25
+Skipping page 0x26
+Skipping page 0x27
+Skipping page 0x28
+Skipping page 0x29
+Skipping page 0x2A
+Skipping page 0x2B
+Skipping page 0x2C
+Skipping page 0x2D
+Skipping page 0x2E
+Skipping page 0x2F
+Skipping page 0x30
+Skipping page 0x31
+Skipping page 0x32
+Skipping page 0x33
+Skipping page 0x34
+Skipping page 0x35
+Skipping page 0x36
+Skipping page 0x37
+Skipping page 0x38
+Skipping page 0x39
+Skipping page 0x3A
+Skipping page 0x3B
+Skipping page 0x3C
+Skipping page 0x3D
+Skipping page 0x3E
+All done! Please power off your phone
