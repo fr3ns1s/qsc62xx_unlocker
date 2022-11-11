@@ -241,7 +241,7 @@ def getOffsets(firmware_version):
     elif "TEL_AU_P622C6V1.0.2B03-S" in firmware_version:
         return [0x019D9CA4,0x1264DF7,0x29E0CD,0x29E203,0x29E18F,0x29E107,0x2ff0f00,BUFFER_ADR]
     elif "ORG_UK_P671A80V1.0.0B23-S" in firmware_version:
-        return [0x23041B4,0x169D3A5,0x408AF9,0x408C2F,0x408BBB,0x408B33,0x2ff0f00,BUFFER_ADR]
+        return [0x23041B4,0x169D3A5,0x408AF9,0x408C2F,0x408BBB,0x408B33,0x2FF0F00,BUFFER_ADR]
     elif "MTC_MD_P640A30V1.0.0B05-S" in firmware_version:
         return [0x2C96620,0x2C964B3,0x30C9A49,0x30C9B7F,0x30C9B0B,0x30C9A83,0x2FF0F00,BUFFER_ADR]
     elif "TEL_AU_P622C6V1.0.2B04-S" in firmware_version:
@@ -377,17 +377,21 @@ def initNand():
     mark_id = struct.unpack("<h",readed[7:9])[0]
     flash_id = struct.unpack("<h",readed[7+4:9+4])[0]
     #size
-    serial_port.write(buildFrame("049C0FFF020400"))
+    serial_port.write(buildFrame("04B410FF020400"))
     readed = serial_port.read_until(b"\x7E")
     log("<- " + bytes2hex(readed))
-    page_size = struct.unpack("<H",readed[7:9])[0]
-    total_page = struct.unpack("<I",readed[9:13])[0]
+    block_count = struct.unpack("<I",readed[11:15])[0] - struct.unpack("<I",readed[7:11])[0]
+    serial_port.write(buildFrame("04980FFF020400"))
+    readed = serial_port.read_until(b"\x7E")
+    log("<- " + bytes2hex(readed))
+    block_size = struct.unpack("<I",readed[7:11])[0]
+    page_size = struct.unpack("<I",readed[11:15])[0]
+    total_page = struct.unpack("<I",readed[15:19])[0]
     
-    print("=========================================")
-    print("NAND: {}, {:04X}:{:04X} ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id))
-    print("TOTAL SIZE: {}Mb, PAGE SIZE: {}".format(int((int(total_page)/1024)/1024),int(page_size)))
-    print("=========================================")
-   
+    print("=========================================================")
+    print("NAND: {}, {:04X}:{:04X}, SIZE: {}Mb ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id,int((block_size*block_count*page_size)/(1024*1024))))
+    print("BLOCKS: {}  SIZE: {}\nPAGES:  {}  SIZE: {}".format(int(block_count),int(block_size),int(total_page),int(page_size)))
+    print("=========================================================")
 
 def readNand(pages,file_name):
    
