@@ -208,15 +208,16 @@ def readInfo():
     imei = readImei()
     if imei:
         imei = imei_format(imei[4:12])
+        imei = imei[:-1] + "-" + imei[-1:]
     bt_adr = readBTAddress()
     if bt_adr:
-        bt_adr = bytes2hex(bt_adr[3:9])
+        bt_adr = "".join("{:02X}:".format(x) for x in bt_adr[3:9])[:-1]
     user_code = readUserCode()
     if user_code:
         user_code = bytes2Str(user_code[3:7])
-    print("=========================================")
+    print("===================================================================")
     print("FW INFO: {}\nCOMPILED AT: {}\nRELEASED AT: {}\nIMEI: {}\nBLUETOOTH: {}\nUSER CODE: {}".format(fw_version,comp_date,rel_date,imei,bt_adr,user_code)) 
-    print("=========================================")
+    print("===================================================================")
     return fw_version
 
 #unlocking
@@ -386,13 +387,13 @@ def initNand():
     log("<- " + bytes2hex(readed))
     block_size = struct.unpack("<I",readed[7:11])[0]
     page_size = struct.unpack("<I",readed[11:15])[0]
-    total_page = struct.unpack("<I",readed[15:19])[0]
+    #page_size_with_spares = struct.unpack("<I",readed[15:19])[0]
     
-    print("=========================================================")
-    print("NAND: {}, {:04X}:{:04X}, SIZE: {}Mb ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id,int((block_size*block_count*page_size)/(1024*1024))))
-    print("BLOCKS: {}  SIZE: {}\nPAGES:  {}  SIZE: {}".format(int(block_count),int(block_size),int(total_page),int(page_size)))
-    print("=========================================================")
-
+    print("===================================================================")
+    print("NAND NAME: {}, ID: {:04X}:{:04X}, SIZE: {}MB ".format(bytes2Str(nand_name_bytes[7:-3]),mark_id,flash_id,int((block_size*block_count*page_size)/(1024*1024))))
+    print("BLOCKS: {}, PAGE SIZE: {} bytes, BLOCK SIZE: {} pages".format(int(block_count),int(page_size),int(block_size)))
+    print("===================================================================")
+    
 def readNand(pages,file_name):
    
     print("Saving nand pages 0x{:04X} on file: {} ...".format(pages,file_name))
