@@ -99,7 +99,7 @@ def calcCRC (command):
 
 def buildFrame(command,with_header = True):
   
-    if len(command) < 2: 
+    if len(command) < 2:
         command = "0" + command
     if len(command) % 2 != 0:
         return None
@@ -199,7 +199,7 @@ def readInfo():
     
     print("Reading info...")
     fw_version = readSWInfo()
-    if fw_version: 
+    if fw_version:
         fw_version = bytes2Str(fw_version[12:37])
     dates = readSWDates()
     if dates:
@@ -216,9 +216,9 @@ def readInfo():
     if user_code:
         user_code = bytes2Str(user_code[3:7])
     print("===================================================================")
-    print("FW INFO: {}\nCOMPILED AT: {}\nRELEASED AT: {}\nIMEI: {}\nBLUETOOTH: {}\nUSER CODE: {}".format(fw_version,comp_date,rel_date,imei,bt_adr,user_code)) 
+    print("FW INFO: {}\nCOMPILED AT: {}\nRELEASED AT: {}\nIMEI: {}\nBLUETOOTH: {}\nUSER CODE: {}".format(fw_version,comp_date,rel_date,imei,bt_adr,user_code))
     print("===================================================================")
-    return fw_version
+    return {"fw_version":fw_version,"imei":imei}
 
 #unlocking
 def getOffsets(firmware_version):
@@ -246,7 +246,7 @@ def getOffsets(firmware_version):
     elif "MTC_MD_P640A30V1.0.0B05-S" in firmware_version:
         return [0x16F8558,0xC4F4B3,0x1082A49,0x1082B7F,0x1082B0B,0x1082A83,0x2FF0F00,BUFFER_ADR]
     elif "TEL_AU_P622C6V1.0.2B04-S" in firmware_version:
-        return [0x19DCCA4,0xAFB45F,0xD7287E,0xD729B3,0xD7293F,0xD728B7,0x2FF0F00,BUFFER_ADR]
+        return [0x19DCCA4,0xAFB45F,0xBD6375,0xBD64AB,0xBD6437,0xBD63AF,0x2FF0F00,BUFFER_ADR]
     elif "MOB_EG_P640A30V1.0.0B04-S" in firmware_version:
          return [0x160FCDC,0x393877,0xD5987D,0xD599B3,0xD5993F,0xD598B7,0x2FF0F00,BUFFER_ADR]
     elif "H3G_GB_P607C5V1.0.0B11-S" in firmware_version:
@@ -261,7 +261,7 @@ def getOffsets(firmware_version):
     
 def sendShellCode(firmware_version):
 
-    offsets = getOffsets(firmware_version)    
+    offsets = getOffsets(firmware_version)
     start_adr = BASE_ADR
     shellcode_file = "zte_shellcode.bin"
     shellcode_size = os.stat(shellcode_file).st_size
@@ -276,7 +276,7 @@ def sendShellCode(firmware_version):
                 bytes_hex = bytes2hex(chunk)
                 if bytes_hex == "41414141":
                     for offset in offsets[1:]:
-                        offset = struct.pack("<I",offset) 
+                        offset = struct.pack("<I",offset)
                         serial_port.write(buildFrame("07" + bytes2hex(struct.pack("<I",start_adr)) + "01" + bytes2hex(offset) + "00000000"))
                         readed = serial_port.read_until(b"\x7E")
                         log("<- " + bytes2hex(readed))
@@ -347,7 +347,7 @@ def sendShellCode(firmware_version):
 def execShellCode():
     
     print("Executing shellcode ...")
-    serial_port.write(buildFrame(HEADER_CLIENT + CMD_EXEC)) 
+    serial_port.write(buildFrame(HEADER_CLIENT + CMD_EXEC))
     readed = serial_port.read_until(b"\x7E")
     log("<- " + bytes2hex(readed))
     if readed[0:1] != bytes.fromhex(HEADER_HOST):
@@ -487,20 +487,20 @@ def setupSerialPort():
         print("Fail to open the port")
         exit(-1)
 
-def backupFileName():
+def backupFileName(dict_info):
    
     now = datetime.now()
-    return "backup_{}.bin".format(now.strftime("%Y%m%d_%H%M%S"))
+    return "backup_{}_{}.bin".format(now.strftime("%Y%m%d_%H%M%S"),dict_info["imei"])
 
 def unlock():
    
-    fw_version = readInfo()
-    if not sendShellCode(fw_version):
+    dict_info = readInfo()
+    if not sendShellCode(dict_info["fw_version"]):
         print("Error on sending ... exiting")
         serial_port.close()
     execShellCode()
     initNand()
-    file_name = backupFileName()
+    file_name = backupFileName(dict_info)
     if readNand(PAGES_NUMBER,file_name):
         clearNand()
         #pages = int(os.stat(file_name).st_size / 0x800)
@@ -510,13 +510,13 @@ def unlock():
 
 def dumpNand(pages):
  
-    fw_version = readInfo()
-    if not sendShellCode(fw_version):
+    dict_info = readInfo()
+    if not sendShellCode(dict_info["fw_version"]):
         print("Error on sending ... exiting")
         serial_port.close()
     execShellCode()
     initNand()
-    file_name = backupFileName()
+    file_name = backupFileName(dict_info)
     if readNand(pages,file_name):
          print("All done!")
 
@@ -532,8 +532,8 @@ def restoreNand(file_name):
         print("Invalid files size ... exiting")
         exit(-1)
         
-    fw_version = readInfo()
-    if not sendShellCode(fw_version):
+    dict_info = readInfo()
+    if not sendShellCode(dict_info["fw_version"]):
         print("Error on sending ... exiting")
         serial_port.close()
     execShellCode()
@@ -601,7 +601,7 @@ def dumpFullRam():
                     f.write(chunk[7:])
                 else:
                     break
-                bar.update(base + i)  
+                bar.update(base + i)
     f.close()
     print("Finished at {}".format(datetime.now()))
 
@@ -657,5 +657,5 @@ def main(argv):
     if serial_port.is_open:
         serial_port.close()
 
-if __name__ == "__main__":  
+if __name__ == "__main__":
     main(sys.argv[1:])
